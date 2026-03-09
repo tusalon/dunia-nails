@@ -1,0 +1,22 @@
+{
+  "name": "Negocio de Prueba",
+  "short_name": "Prueba",
+  "description": "Entorno de pruebas para sistema de reservas",
+  "start_url": "/proyectoprueba/",
+  "scope": "/proyectoprueba/",
+  "display": "standalone",
+  "background_color": "#ec4899",
+  "theme_color": "#ec4899",
+  "icons": [
+    {
+      "src": "/proyectoprueba/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/proyectoprueba/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
