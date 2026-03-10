@@ -1,7 +1,7 @@
 // components/WhatsAppButton.js
 
 function WhatsAppButton() {
-    const [telefono, setTelefono] = React.useState('54646800');
+    const [telefono, setTelefono] = React.useState('59315976');
     const [nombreNegocio, setNombreNegocio] = React.useState('');
 
     React.useEffect(() => {
