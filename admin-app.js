@@ -821,42 +821,68 @@ function AdminApp() {
     };
 
     // ============================================
-    // 🔥 FUNCIÓN PARA CONFIRMAR PAGO (NUEVA)
-    // ============================================
-    const confirmarPago = async (id, bookingData) => {
-        if (!confirm(`¿Confirmar que se recibió el pago de ${bookingData.cliente_nombre}? El turno pasará a "Reservado".`)) return;
-        
-        try {
-            const negocioId = getNegocioId();
-            const response = await fetch(
-                `${window.SUPABASE_URL}/rest/v1/reservas?negocio_id=eq.${negocioId}&id=eq.${id}`,
-                {
-                    method: 'PATCH',
-                    headers: {
-                        'apikey': window.SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ estado: 'Reservado' })
-                }
-            );
-            
-            if (!response.ok) throw new Error('Error al confirmar pago');
-            
-            // Notificar a la dueña que el turno está confirmado (sin push)
-            if (window.notificarNuevaReserva) {
-                const reservaConfirmada = { ...bookingData, estado: 'Reservado' };
-                await window.notificarNuevaReserva(reservaConfirmada);
+// 🔥 FUNCIÓN PARA CONFIRMAR PAGO (CON WHATSAPP AL CLIENTE)
+// ============================================
+const confirmarPago = async (id, bookingData) => {
+    if (!confirm(`¿Confirmar que se recibió el pago de ${bookingData.cliente_nombre}? El turno pasará a "Reservado".`)) return;
+    
+    try {
+        const negocioId = getNegocioId();
+        const response = await fetch(
+            `${window.SUPABASE_URL}/rest/v1/reservas?negocio_id=eq.${negocioId}&id=eq.${id}`,
+            {
+                method: 'PATCH',
+                headers: {
+                    'apikey': window.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ estado: 'Reservado' })
             }
-            
-            alert('✅ Pago confirmado. Turno reservado.');
-            fetchBookings();
-            
-        } catch (error) {
-            console.error('Error confirmando pago:', error);
-            alert('❌ Error al confirmar el pago');
+        );
+        
+        if (!response.ok) throw new Error('Error al confirmar pago');
+        
+        // 🔥 ENVIAR WHATSAPP AL CLIENTE CONFIRMANDO EL TURNO
+        const fechaConDia = window.formatFechaCompleta ? 
+            window.formatFechaCompleta(bookingData.fecha) : 
+            bookingData.fecha;
+        
+        const horaFormateada = window.formatTo12Hour ? 
+            window.formatTo12Hour(bookingData.hora_inicio) : 
+            bookingData.hora_inicio;
+        
+        const mensajeCliente = 
+`💅 *DuniaNails - Turno Confirmado* 🎉
+
+Hola *${bookingData.cliente_nombre}*, ¡tu turno ha sido CONFIRMADO!
+
+📅 *Fecha:* ${fechaConDia}
+⏰ *Hora:* ${horaFormateada}
+💈 *Servicio:* ${bookingData.servicio}
+👩‍🎨 *Profesional:* ${bookingData.profesional_nombre || bookingData.trabajador_nombre}
+
+✅ *Pago recibido correctamente*
+
+Te esperamos en DuniaNails 💖
+Cualquier cambio, podés cancelarlo desde la app con hasta 1 hora de anticipación.`;
+
+        window.enviarWhatsApp(bookingData.cliente_whatsapp, mensajeCliente);
+        
+        // Notificar a la dueña que el turno está confirmado (sin push)
+        if (window.notificarNuevaReserva) {
+            const reservaConfirmada = { ...bookingData, estado: 'Reservado' };
+            await window.notificarNuevaReserva(reservaConfirmada);
         }
-    };
+        
+        alert('✅ Pago confirmado. Turno reservado y cliente notificado.');
+        fetchBookings();
+        
+    } catch (error) {
+        console.error('Error confirmando pago:', error);
+        alert('❌ Error al confirmar el pago');
+    }
+};
 
     const handleLogout = () => {
         if (confirm('¿Cerrar sesión?')) {
