@@ -1,9 +1,9 @@
-// components/admin/ServiciosPanel.js - CON PRECIO ÚNICO (CORREGIDO)
+// components/admin/ServiciosPanel.js - CON ENTRADA DE TEXTO LIBRE Y HORARIOS PERMITIDOS
+// MEJORA: Inputs de texto que permiten escribir cualquier valor y campo de horarios permitidos
 
 function ServiciosPanel() {
     const [servicios, setServicios] = React.useState([]);
     const [mostrarForm, setMostrarForm] = React.useState(false);
-    // 🔥 CORREGIDO: Faltaba el signo =
     const [editando, setEditando] = React.useState(null);
     const [cargando, setCargando] = React.useState(true);
 
@@ -140,6 +140,11 @@ function ServiciosPanel() {
                                     {s.descripcion && (
                                         <p className="text-xs text-gray-500 mt-1">{s.descripcion}</p>
                                     )}
+                                    {s.horarios_permitidos && s.horarios_permitidos.length > 0 && (
+                                        <p className="text-xs text-amber-600 mt-1">
+                                            🕐 Horarios permitidos: {s.horarios_permitidos.join(', ')}
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="flex gap-2">
                                     <button
@@ -169,14 +174,22 @@ function ServiciosPanel() {
     );
 }
 
+// COMPONENTE CON ENTRADA DE TEXTO LIBRE Y CAMPO DE HORARIOS PERMITIDOS
 function ServicioForm({ servicio, onGuardar, onCancelar }) {
     const [form, setForm] = React.useState(servicio || {
         nombre: '',
-        duracion: 45,
-        precio: 0,
-        descripcion: ''
+        duracion: '45',
+        precio: '0',
+        descripcion: '',
+        horarios_permitidos: []  // nuevo campo
     });
 
+    // Para el input de horarios (string separado por comas)
+    const [horariosStr, setHorariosStr] = React.useState(
+        servicio?.horarios_permitidos ? servicio.horarios_permitidos.join(', ') : ''
+    );
+
+    // Función para validar y convertir a número al guardar
     const handleSubmit = (e) => {
         e.preventDefault();
         
@@ -184,16 +197,35 @@ function ServicioForm({ servicio, onGuardar, onCancelar }) {
             alert('El nombre del servicio es obligatorio');
             return;
         }
-        if (!form.duracion || form.duracion < 15) {
+
+        const duracionNum = parseInt(form.duracion);
+        if (isNaN(duracionNum) || duracionNum < 15) {
             alert('La duración debe ser al menos 15 minutos');
             return;
         }
-        if (!form.precio || form.precio < 0) {
+
+        const precioNum = parseFloat(form.precio);
+        if (isNaN(precioNum) || precioNum < 0) {
             alert('El precio debe ser un valor válido');
             return;
         }
+
+        // Convertir la cadena de horarios a array
+        let horariosArray = [];
+        if (horariosStr.trim()) {
+            horariosArray = horariosStr.split(',').map(h => h.trim()).filter(h => h.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/));
+            if (horariosArray.length === 0 && horariosStr.trim()) {
+                alert('Formato de horarios inválido. Use formato HH:MM separados por comas (ej: 09:00, 11:00, 15:30)');
+                return;
+            }
+        }
         
-        onGuardar(form);
+        onGuardar({
+            ...form,
+            duracion: duracionNum,
+            precio: precioNum,
+            horarios_permitidos: horariosArray
+        });
     };
 
     return (
@@ -218,49 +250,67 @@ function ServicioForm({ servicio, onGuardar, onCancelar }) {
                 </div>
                 
                 <div className="grid grid-cols-2 gap-2">
+                    {/* CAMPO DE DURACIÓN */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Duración (min) *
                         </label>
                         <input
-                            type="number"
+                            type="text"
                             value={form.duracion}
                             onChange={(e) => {
-                                const valor = parseInt(e.target.value);
-                                setForm({
-                                    ...form, 
-                                    duracion: isNaN(valor) ? 45 : Math.max(15, valor)
-                                });
+                                const valor = e.target.value.replace(/[^0-9]/g, '');
+                                setForm({...form, duracion: valor});
                             }}
+                            onFocus={(e) => e.target.select()}
                             className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                            required
-                            min="15"
-                            max="480"
-                            step="15"
+                            placeholder="Ej: 45"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                         />
-                        <p className="text-xs text-gray-400 mt-1">Múltiplos de 15 min</p>
+                        <p className="text-xs text-gray-400 mt-1">Podés borrar y escribir el valor que quieras</p>
                     </div>
                     
+                    {/* CAMPO DE PRECIO */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Precio ($) *
                         </label>
                         <input
-                            type="number"
+                            type="text"
                             value={form.precio}
                             onChange={(e) => {
-                                const valor = parseFloat(e.target.value);
-                                setForm({
-                                    ...form, 
-                                    precio: isNaN(valor) ? 0 : Math.max(0, valor)
-                                });
+                                const valor = e.target.value.replace(/[^0-9.]/g, '');
+                                const partes = valor.split('.');
+                                if (partes.length > 2) return;
+                                setForm({...form, precio: valor});
                             }}
+                            onFocus={(e) => e.target.select()}
                             className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                            required
-                            min="0"
-                            step="0.5"
+                            placeholder="Ej: 2500"
+                            inputMode="decimal"
+                            pattern="[0-9]*\.?[0-9]*"
                         />
+                        <p className="text-xs text-gray-400 mt-1">Podés usar punto para decimales (ej: 99.50)</p>
                     </div>
+                </div>
+
+                {/* NUEVO CAMPO: HORARIOS PERMITIDOS */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Horarios permitidos (opcional)
+                    </label>
+                    <input
+                        type="text"
+                        value={horariosStr}
+                        onChange={(e) => setHorariosStr(e.target.value)}
+                        className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                        placeholder="Ej: 09:00, 11:00, 15:30"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                        Horarios específicos en que está disponible este servicio (formato HH:MM separados por comas). 
+                        Si se deja vacío, se mostrarán todos los horarios del profesional.
+                    </p>
                 </div>
                 
                 <div>

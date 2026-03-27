@@ -1,7 +1,7 @@
 // components/Confirmation.js - VERSIÓN SIMPLIFICADA (SIN ENVÍO AUTOMÁTICO)
 
 function Confirmation({ booking, onReset }) {
-    const [telefonoDuenno, setTelefonoDuenno] = React.useState('59315976');
+    const [telefonoDuenno, setTelefonoDuenno] = React.useState('55002272');
     const [nombreNegocio, setNombreNegocio] = React.useState('Negocio de Prueba');
 
     React.useEffect(() => {

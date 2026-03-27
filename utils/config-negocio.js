@@ -1,13 +1,19 @@
-// utils/config-negocio.js - DuniaNails
+// utils/config-negocio.js - VERSIÓN MULTI-TENANT CORREGIDA
+// CLIENTE: DuniaNails
+
 console.log('🏢 config-negocio.js cargado');
 
 // ============================================
-// 🔥 CONFIGURACIÓN DE DUNIANAILS
+// 🔥 CONFIGURACIÓN POR CLIENTE - ¡LO ÚNICO QUE CAMBIA!
 // ============================================
-const NEGOCIO_ID_POR_DEFECTO = '0a418537-30d4-4939-863a-bf61c414185a'; // ID DE DUNIANAILS
+const NEGOCIO_ID_POR_DEFECTO = '0a418537-30d4-4939-863a-bf61c414185a'; // ID de DuniaNails
 
+// Hacer accesible globalmente
 window.NEGOCIO_ID_POR_DEFECTO = NEGOCIO_ID_POR_DEFECTO;
 
+// ============================================
+// FUNCIONES PARA OBTENER EL ID (GLOBALES)
+// ============================================
 window.getNegocioId = function() {
     return NEGOCIO_ID_POR_DEFECTO;
 };
@@ -16,20 +22,30 @@ window.getNegocioIdFromConfig = function() {
     return NEGOCIO_ID_POR_DEFECTO;
 };
 
+// Cache de configuración
 let configCache = null;
 let ultimaActualizacion = 0;
-const CACHE_DURATION = 2 * 60 * 1000;
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutos
 
+/**
+ * Obtiene el negocio_id del localStorage o usa el ID por defecto
+ */
 function getNegocioId() {
+    // 1. Prioridad: lo que haya en localStorage (cuando el admin se loguea)
     const localId = localStorage.getItem('negocioId');
     if (localId) {
         console.log('📌 Usando negocioId de localStorage:', localId);
         return localId;
     }
-    console.log('📌 Usando negocioId por defecto:', NEGOCIO_ID_POR_DEFECTO);
+    
+    // 2. Si no, usar el ID por defecto
+    console.log('📌 Usando negocioId por defecto (quemado en código):', NEGOCIO_ID_POR_DEFECTO);
     return NEGOCIO_ID_POR_DEFECTO;
 }
 
+/**
+ * Carga la configuración del negocio desde Supabase
+ */
 window.cargarConfiguracionNegocio = async function(forceRefresh = false) {
     const negocioId = getNegocioId();
     if (!negocioId) {
@@ -37,6 +53,7 @@ window.cargarConfiguracionNegocio = async function(forceRefresh = false) {
         return null;
     }
 
+    // Usar caché si no se fuerza refresco
     if (!forceRefresh && configCache && (Date.now() - ultimaActualizacion) < CACHE_DURATION) {
         console.log('📦 Usando cache de configuración');
         return configCache;
@@ -65,6 +82,7 @@ window.cargarConfiguracionNegocio = async function(forceRefresh = false) {
 
         const data = await response.json();
         
+        // Guardar en cache
         configCache = data[0] || null;
         ultimaActualizacion = Date.now();
         
@@ -76,6 +94,7 @@ window.cargarConfiguracionNegocio = async function(forceRefresh = false) {
             console.log('   - Instagram:', configCache.instagram);
             console.log('   - Logo:', configCache.logo_url);
             
+            // Guardar ID en localStorage para futuras sesiones
             const localId = localStorage.getItem('negocioId');
             if (!localId) {
                 console.log('💾 Guardando ID en localStorage');
@@ -92,56 +111,95 @@ window.cargarConfiguracionNegocio = async function(forceRefresh = false) {
     }
 };
 
+/**
+ * Obtiene el nombre del negocio
+ */
 window.getNombreNegocio = async function() {
     const config = await window.cargarConfiguracionNegocio();
     return config?.nombre || 'DuniaNails';
 };
 
+/**
+ * Obtiene el teléfono del dueño
+ */
 window.getTelefonoDuenno = async function() {
     const config = await window.cargarConfiguracionNegocio();
     return config?.telefono || '59315976';
 };
 
+/**
+ * Obtiene el email del negocio
+ */
 window.getEmailNegocio = async function() {
     const config = await window.cargarConfiguracionNegocio();
     return config?.email || '';
 };
 
+/**
+ * Obtiene el Instagram
+ */
 window.getInstagram = async function() {
     const config = await window.cargarConfiguracionNegocio();
     return config?.instagram || 'dunia_nails';
 };
 
+/**
+ * Obtiene el Facebook
+ */
 window.getFacebook = async function() {
     const config = await window.cargarConfiguracionNegocio();
     return config?.facebook || 'dunia.nails';
 };
 
+/**
+ * Obtiene el horario de atención
+ */
 window.getHorarioAtencion = async function() {
     const config = await window.cargarConfiguracionNegocio();
     return config?.horario_atencion || 'Lun-Vie 10:00-20:00, Sáb 10:00-18:00';
 };
 
+/**
+ * Obtiene el mensaje de bienvenida
+ */
 window.getMensajeBienvenida = async function() {
     const config = await window.cargarConfiguracionNegocio();
     return config?.mensaje_bienvenida || '👋 Bienvenida a DuniaNails - Especialistas en uñas';
 };
 
+/**
+ * Obtiene el mensaje de confirmación
+ */
 window.getMensajeConfirmacion = async function() {
     const config = await window.cargarConfiguracionNegocio();
     return config?.mensaje_confirmacion || '✅ Tu turno en DuniaNails ha sido reservado';
 };
 
+/**
+ * Obtiene el tópico de ntfy para notificaciones
+ */
 window.getNtfyTopic = async function() {
     const config = await window.cargarConfiguracionNegocio();
     return config?.ntfy_topic || 'dunia-nails-notifications';
 };
 
+/**
+ * 🔥 NUEVA FUNCIÓN: Obtiene si el negocio requiere anticipo
+ */
+window.getRequiereAnticipo = async function() {
+    const config = await window.cargarConfiguracionNegocio();
+    return config?.requiere_anticipo || false;
+};
+
+/**
+ * Verifica si el negocio ya está configurado
+ */
 window.negocioConfigurado = async function() {
     const config = await window.cargarConfiguracionNegocio();
     return config?.configurado || false;
 };
 
+// Precargar configuración al inicio
 setTimeout(async () => {
     console.log('🔄 Precargando configuración automática...');
     await window.cargarConfiguracionNegocio();

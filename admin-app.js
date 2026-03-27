@@ -1,7 +1,7 @@
-// admin-app.js - Panel de administración (VERSIÓN CON ANTICIPOS)
-// CLIENTE: DuniaNails
+// admin-app.js - Panel de administración (VERSIÓN GENÉRICA)
+// SIN NINGÚN NOMBRE DE CLIENTE HARCODEADO
 
-console.log('🚀 ADMIN-APP.JS - DuniaNails');
+console.log('🚀 ADMIN-APP.JS - Panel de administración');
 
 window.addEventListener('error', function(e) {
     console.error('❌ Error detectado, posible versión antigua:', e.message);
@@ -45,7 +45,7 @@ function getNegocioId() {
 }
 
 // ============================================
-// FUNCIONES DE SUPABASE (CORREGIDAS CON FILTRO)
+// FUNCIONES DE SUPABASE
 // ============================================
 
 async function getAllBookings() {
@@ -304,7 +304,7 @@ function AdminApp() {
     const [userRole, setUserRole] = React.useState('admin');
     const [userNivel, setUserNivel] = React.useState(3);
     const [profesional, setProfesional] = React.useState(null);
-    const [nombreNegocio, setNombreNegocio] = React.useState('DuniaNails');
+    const [nombreNegocio, setNombreNegocio] = React.useState('Mi Negocio');
     
     const [config, setConfig] = React.useState(null);
     const [configVersion, setConfigVersion] = React.useState(0);
@@ -793,7 +793,112 @@ function AdminApp() {
     }, [userRole, userNivel, profesional]);
 
     // ============================================
-    // HANDLE CANCEL CORREGIDO - USA notificarCancelacion
+    // FUNCIÓN PARA CONFIRMAR PAGO
+    // ============================================
+    const confirmarPago = async (id, bookingData) => {
+        if (!confirm(`¿Confirmar que se recibió el pago de ${bookingData.cliente_nombre}? El turno pasará a "Reservado".`)) return;
+        
+        try {
+            console.log(`💰 Confirmando pago para reserva ${id}`);
+            
+            const response = await fetch(
+                `${window.SUPABASE_URL}/rest/v1/reservas?negocio_id=eq.${getNegocioId()}&id=eq.${id}`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': window.SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ estado: 'Reservado' })
+                }
+            );
+            
+            if (!response.ok) {
+                throw new Error('Error al confirmar pago');
+            }
+            
+            console.log('📤 Enviando confirmación de turno al cliente...');
+            
+            const configNegocio = await window.cargarConfiguracionNegocio();
+            
+            const fechaConDia = window.formatFechaCompleta ? 
+                window.formatFechaCompleta(bookingData.fecha) : 
+                bookingData.fecha;
+            
+            const horaFormateada = window.formatTo12Hour ? 
+                window.formatTo12Hour(bookingData.hora_inicio) : 
+                bookingData.hora_inicio;
+            
+            const nombreNegocio = configNegocio?.nombre || await window.getNombreNegocio ? 
+                await window.getNombreNegocio() : 
+                'Mi Negocio';
+            
+            const mensajeCliente = 
+`💅 *${nombreNegocio} - Turno Confirmado* 🎉
+
+Hola *${bookingData.cliente_nombre}*, ¡tu turno ha sido CONFIRMADO!
+
+📅 *Fecha:* ${fechaConDia}
+⏰ *Hora:* ${horaFormateada}
+💅 *Servicio:* ${bookingData.servicio}
+👩‍🎨 *Profesional:* ${bookingData.profesional_nombre || bookingData.trabajador_nombre}
+
+✅ *Pago recibido correctamente*
+
+Te esperamos 💖
+Cualquier cambio, podés cancelarlo desde la app con hasta 1 hora de anticipación.`;
+
+            window.enviarWhatsApp(bookingData.cliente_whatsapp, mensajeCliente);
+            
+            alert('✅ Pago confirmado. Turno reservado y cliente notificado.');
+            fetchBookings();
+            
+        } catch (error) {
+            console.error('Error confirmando pago:', error);
+            alert('❌ Error al confirmar el pago');
+        }
+    };
+
+    // ============================================
+    // FUNCIÓN PARA BORRAR TODAS LAS RESERVAS CANCELADAS
+    // ============================================
+    const borrarCanceladas = async () => {
+        if (!confirm('¿Estás segura de querer borrar TODAS las reservas canceladas? Esta acción no se puede deshacer.')) return;
+        
+        try {
+            const negocioId = getNegocioId();
+            
+            const response = await fetch(
+                `${window.SUPABASE_URL}/rest/v1/reservas?negocio_id=eq.${negocioId}&estado=eq.Cancelado`,
+                {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': window.SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+            
+            if (!response.ok) {
+                const error = await response.text();
+                console.error('Error al borrar:', error);
+                alert('❌ Error al borrar las reservas canceladas');
+                return;
+            }
+            
+            alert(`✅ Se borraron todas las reservas canceladas correctamente`);
+            fetchBookings(); // Recargar la lista
+            
+        } catch (error) {
+            console.error('Error:', error);
+            alert('❌ Error al conectar con el servidor');
+        }
+    };
+
+    // ============================================
+    // HANDLE CANCEL
     // ============================================
     const handleCancel = async (id, bookingData) => {
         if (!confirm(`¿Cancelar reserva de ${bookingData.cliente_nombre}?`)) return;
@@ -802,13 +907,8 @@ function AdminApp() {
         if (ok) {
             console.log('📤 Enviando notificaciones de cancelación por admin...');
             
-            // Marcar que fue cancelado por admin
             bookingData.cancelado_por = 'admin';
             
-            // ÚNICA LLAMADA - notificarCancelacion ya maneja:
-            // - WhatsApp al cliente
-            // - WhatsApp a la dueña
-            // - ntfy push
             if (window.notificarCancelacion) {
                 await window.notificarCancelacion(bookingData);
             }
@@ -820,70 +920,6 @@ function AdminApp() {
         }
     };
 
-    // ============================================
-// 🔥 FUNCIÓN PARA CONFIRMAR PAGO (CON WHATSAPP AL CLIENTE)
-// ============================================
-const confirmarPago = async (id, bookingData) => {
-    if (!confirm(`¿Confirmar que se recibió el pago de ${bookingData.cliente_nombre}? El turno pasará a "Reservado".`)) return;
-    
-    try {
-        const negocioId = getNegocioId();
-        const response = await fetch(
-            `${window.SUPABASE_URL}/rest/v1/reservas?negocio_id=eq.${negocioId}&id=eq.${id}`,
-            {
-                method: 'PATCH',
-                headers: {
-                    'apikey': window.SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ estado: 'Reservado' })
-            }
-        );
-        
-        if (!response.ok) throw new Error('Error al confirmar pago');
-        
-        // 🔥 ENVIAR WHATSAPP AL CLIENTE CONFIRMANDO EL TURNO
-        const fechaConDia = window.formatFechaCompleta ? 
-            window.formatFechaCompleta(bookingData.fecha) : 
-            bookingData.fecha;
-        
-        const horaFormateada = window.formatTo12Hour ? 
-            window.formatTo12Hour(bookingData.hora_inicio) : 
-            bookingData.hora_inicio;
-        
-        const mensajeCliente = 
-`💅 *DuniaNails - Turno Confirmado* 🎉
-
-Hola *${bookingData.cliente_nombre}*, ¡tu turno ha sido CONFIRMADO!
-
-📅 *Fecha:* ${fechaConDia}
-⏰ *Hora:* ${horaFormateada}
-💈 *Servicio:* ${bookingData.servicio}
-👩‍🎨 *Profesional:* ${bookingData.profesional_nombre || bookingData.trabajador_nombre}
-
-✅ *Pago recibido correctamente*
-
-Te esperamos en DuniaNails 💖
-Cualquier cambio, podés cancelarlo desde la app con hasta 1 hora de anticipación.`;
-
-        window.enviarWhatsApp(bookingData.cliente_whatsapp, mensajeCliente);
-        
-        // Notificar a la dueña que el turno está confirmado (sin push)
-        if (window.notificarNuevaReserva) {
-            const reservaConfirmada = { ...bookingData, estado: 'Reservado' };
-            await window.notificarNuevaReserva(reservaConfirmada);
-        }
-        
-        alert('✅ Pago confirmado. Turno reservado y cliente notificado.');
-        fetchBookings();
-        
-    } catch (error) {
-        console.error('Error confirmando pago:', error);
-        alert('❌ Error al confirmar el pago');
-    }
-};
-
     const handleLogout = () => {
         if (confirm('¿Cerrar sesión?')) {
             localStorage.removeItem('adminAuth');
@@ -894,13 +930,13 @@ Cualquier cambio, podés cancelarlo desde la app con hasta 1 hora de anticipaci�
             localStorage.removeItem('clienteAuth');
             localStorage.removeItem('negocioId');
             
-            console.log('🚪 Sesión cerrada, redirigiendo a login');
-            window.location.href = 'admin-login.html';
+            console.log('🚪 Sesión cerrada, redirigiendo a index.html');
+            window.location.href = 'index.html'; // Cambiado de admin-login.html a index.html
         }
     };
 
     // ============================================
-    // FILTROS (ACTUALIZADO CON PENDIENTES)
+    // FILTROS
     // ============================================
     const getFilteredBookings = () => {
         console.log('🔄 Aplicando filtros a', bookings.length, 'reservas');
@@ -914,7 +950,7 @@ Cualquier cambio, podés cancelarlo desde la app con hasta 1 hora de anticipaci�
         let resultado;
         if (statusFilter === 'activas') {
             resultado = filtradas.filter(b => b.estado === 'Reservado');
-        } else if (statusFilter === 'pendientes') {  // 🔥 NUEVO FILTRO
+        } else if (statusFilter === 'pendientes') {
             resultado = filtradas.filter(b => b.estado === 'Pendiente');
         } else if (statusFilter === 'completadas') {
             resultado = filtradas.filter(b => b.estado === 'Completado');
@@ -929,7 +965,6 @@ Cualquier cambio, podés cancelarlo desde la app con hasta 1 hora de anticipaci�
         return resultado;
     };
 
-    // 🔥 NUEVOS CONTADORES
     const activasCount = bookings.filter(b => b.estado === 'Reservado').length;
     const pendientesCount = bookings.filter(b => b.estado === 'Pendiente').length;
     const completadasCount = bookings.filter(b => b.estado === 'Completado').length;
@@ -976,7 +1011,7 @@ Cualquier cambio, podés cancelarlo desde la app con hasta 1 hora de anticipaci�
         <div className="min-h-screen bg-pink-50 p-3 sm:p-6">
             <div className="max-w-6xl mx-auto space-y-4">
                 
-                {/* ===== HEADER CON ESTILO FEMENINO ===== */}
+                {/* HEADER */}
                 <div className="bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-l-4 border-pink-500">
                     {/* Título y logo */}
                     <div className="flex items-center gap-3">
@@ -1053,7 +1088,7 @@ Cualquier cambio, podés cancelarlo desde la app con hasta 1 hora de anticipaci�
                                         value={nuevaReservaData.cliente_nombre}
                                         onChange={(e) => setNuevaReservaData({...nuevaReservaData, cliente_nombre: e.target.value})}
                                         className="w-full border rounded-lg px-3 py-2"
-                                        placeholder="Ej: María Pérez"
+                                        placeholder="Ej: Juan Pérez"
                                     />
                                 </div>
 
@@ -1069,7 +1104,7 @@ Cualquier cambio, podés cancelarlo desde la app con hasta 1 hora de anticipaci�
                                                 setNuevaReservaData({...nuevaReservaData, cliente_whatsapp: value});
                                             }}
                                             className="w-full px-4 py-2 rounded-r-lg border border-gray-300"
-                                            placeholder="59315976"
+                                            placeholder="55002272"
                                         />
                                     </div>
                                     <p className="text-xs text-gray-400 mt-1">8 dígitos después del +53</p>
@@ -1245,7 +1280,7 @@ Cualquier cambio, podés cancelarlo desde la app con hasta 1 hora de anticipaci�
                             </div>
                         )}
 
-                        {/* SOLO CLIENTES REGISTRADOS */}
+                        {/* CLIENTES REGISTRADOS */}
                         <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500">
                             <button
                                 onClick={() => {
@@ -1301,7 +1336,7 @@ Cualquier cambio, podés cancelarlo desde la app con hasta 1 hora de anticipaci�
                     </div>
                 )}
 
-                {/* RESERVAS - VERSIÓN CON ANTICIPOS */}
+                {/* RESERVAS */}
                 {tabActivo === 'reservas' && (
                     <>
                         {userRole === 'profesional' && profesional && (
@@ -1318,13 +1353,24 @@ Cualquier cambio, podés cancelarlo desde la app con hasta 1 hora de anticipaci�
                                 {filterDate && <button onClick={() => setFilterDate('')} className="text-pink-500 text-sm">Limpiar filtro</button>}
                             </div>
 
-                            {/* FILTROS CON PENDIENTES */}
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 items-center">
                                 <button onClick={() => setStatusFilter('activas')} className={`px-4 py-2 rounded-lg text-sm font-medium ${statusFilter === 'activas' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-700'}`}>Activas ({activasCount})</button>
                                 <button onClick={() => setStatusFilter('pendientes')} className={`px-4 py-2 rounded-lg text-sm font-medium ${statusFilter === 'pendientes' ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-700'}`}>Pendientes ({pendientesCount})</button>
                                 <button onClick={() => setStatusFilter('completadas')} className={`px-4 py-2 rounded-lg text-sm font-medium ${statusFilter === 'completadas' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-700'}`}>Completadas ({completadasCount})</button>
                                 <button onClick={() => setStatusFilter('canceladas')} className={`px-4 py-2 rounded-lg text-sm font-medium ${statusFilter === 'canceladas' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-700'}`}>Canceladas ({canceladasCount})</button>
                                 <button onClick={() => setStatusFilter('todas')} className={`px-4 py-2 rounded-lg text-sm font-medium ${statusFilter === 'todas' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-700'}`}>Todas ({bookings.length})</button>
+                                
+                                {/* 🔥 BOTÓN PARA BORRAR CANCELADAS - SOLO EN PESTAÑA CANCELADAS */}
+                                {statusFilter === 'canceladas' && (
+                                    <button
+                                        onClick={borrarCanceladas}
+                                        className="px-4 py-2 bg-red-700 text-white rounded-lg text-sm font-medium hover:bg-red-800 transition flex items-center gap-2"
+                                        title="Borrar todas las reservas canceladas"
+                                    >
+                                        <span>🗑️</span>
+                                        Borrar todas
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -1343,7 +1389,7 @@ Cualquier cambio, podés cancelarlo desde la app con hasta 1 hora de anticipaci�
                                     filteredBookings.map(b => (
                                         <div key={b.id} className={`bg-white p-4 rounded-xl shadow-sm border-l-4 ${
                                             b.estado === 'Reservado' ? 'border-l-pink-500' :
-                                            b.estado === 'Pendiente' ? 'border-l-yellow-500' :  // 🔥 NUEVO COLOR AMARILLO
+                                            b.estado === 'Pendiente' ? 'border-l-yellow-500' :
                                             b.estado === 'Completado' ? 'border-l-green-500' :
                                             'border-l-red-500'
                                         }`}>
@@ -1360,7 +1406,7 @@ Cualquier cambio, podés cancelarlo desde la app con hasta 1 hora de anticipaci�
                                             <div className="flex justify-between items-center mt-3 pt-2 border-t">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-semibold
                                                     ${b.estado === 'Reservado' ? 'bg-pink-100 text-pink-700' : 
-                                                      b.estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-700' :  // 🔥 NUEVO COLOR
+                                                      b.estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-700' :
                                                       b.estado === 'Completado' ? 'bg-green-100 text-green-700' : 
                                                       'bg-red-100 text-red-700'}`}>
                                                     {b.estado}
@@ -1368,17 +1414,14 @@ Cualquier cambio, podés cancelarlo desde la app con hasta 1 hora de anticipaci�
                                                 <div className="flex gap-2">
                                                     {b.estado === 'Pendiente' && (
                                                         <button 
-                                                            onClick={() => confirmarPago(b.id, b)}
+                                                            onClick={() => confirmarPago(b.id, b)} 
                                                             className="px-3 py-1 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 flex items-center gap-1"
                                                         >
                                                             <span>✅</span> Confirmar pago
                                                         </button>
                                                     )}
                                                     {b.estado === 'Reservado' && (
-                                                        <button 
-                                                            onClick={() => handleCancel(b.id, b)} 
-                                                            className="px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 flex items-center gap-1"
-                                                        >
+                                                        <button onClick={() => handleCancel(b.id, b)} className="px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 flex items-center gap-1">
                                                             <span>❌</span> Cancelar
                                                         </button>
                                                     )}
