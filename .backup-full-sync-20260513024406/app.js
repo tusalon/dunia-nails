@@ -184,22 +184,22 @@ const enviarCancelacionWhatsApp = (bookingData) => {
             window.formatFechaCompleta(bookingData.fecha) : 
             bookingData.fecha;
         
-        const mensaje =
-`*CANCELACION DE TURNO - LAG.barberia*
+        const mensaje = 
+`❌ *CANCELACIÓN DE TURNO - LAG.barberia*
 
 Hola *${bookingData.cliente_nombre}*, lamentamos informarte que tu turno ha sido cancelado.
 
-*Fecha:* ${fechaConDia}
-*Hora:* ${formatTo12Hour(bookingData.hora_inicio)}
-*Servicio:* ${bookingData.servicio}
-*Barbero:* ${bookingData.barbero_nombre || bookingData.trabajador_nombre || 'No asignado'}
+📅 *Fecha:* ${fechaConDia}
+⏰ *Hora:* ${formatTo12Hour(bookingData.hora_inicio)}
+💈 *Servicio:* ${bookingData.servicio}
+👨‍🎨 *Barbero:* ${bookingData.barbero_nombre || bookingData.trabajador_nombre || 'No asignado'}
 
-*Motivo:* Cancelacion por administracion
+🔔 *Motivo:* Cancelación por administración
 
-*Queres reprogramar?*
-Podes hacerlo desde la app
+📱 *¿Querés reprogramar?*
+Podés hacerlo desde la app
 
-Disculpa las molestias. Esperamos verte pronto en LAG.barberia.
+Disculpá las molestias. Esperamos verte pronto en LAG.barberia ✂️
 
 LAG.barberia - Nivel que se nota`;
 
@@ -663,7 +663,7 @@ function AdminApp() {
                 await loadClientesAutorizados();
                 alert(`✅ Cliente ${cliente.nombre} aprobado`);
                 
-                const mensaje = `Hola ${cliente.nombre}! Tu acceso a LAG.barberia ha sido APROBADO. Ya podes reservar turnos desde la app.`;
+                const mensaje = `✅ ¡Hola ${cliente.nombre}! Tu acceso a LAG.barberia ha sido APROBADO. Ya podés reservar turnos desde la app.`;
                 const telefono = cliente.whatsapp.replace(/\D/g, '');
                 const encodedText = encodeURIComponent(mensaje);
                 window.open(`https://api.whatsapp.com/send?phone=${telefono}&text=${encodedText}`, '_blank');
@@ -967,7 +967,7 @@ function AdminApp() {
                                                 setNuevaReservaData({...nuevaReservaData, cliente_whatsapp: value});
                                             }}
                                             className="w-full px-4 py-2 rounded-r-lg border border-gray-300"
-                                            placeholder="55002272"
+                                            placeholder="59315976"
                                         />
                                     </div>
                                     <p className="text-xs text-gray-400 mt-1">8 dígitos después del +53</p>
@@ -1216,7 +1216,7 @@ function AdminApp() {
                                                             <p className="font-bold text-gray-800">{cliente.nombre}</p>
                                                             <p className="text-sm text-gray-600">📱 +{cliente.whatsapp}</p>
                                                         </div>
-                                                        {(userRole === 'admin' || userNivel >= 3) && cliente.whatsapp !== '55002272' && (
+                                                        {(userRole === 'admin' || userNivel >= 3) && cliente.whatsapp !== '59315976' && (
                                                             <button
                                                                 onClick={() => handleEliminarAutorizado(cliente.whatsapp)}
                                                                 className="px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600"

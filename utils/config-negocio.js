@@ -140,7 +140,7 @@ window.getEmailNegocio = async function() {
  */
 window.getInstagram = async function() {
     const config = await window.cargarConfiguracionNegocio();
-    return config?.instagram || 'dunia_nails';
+    return config?.instagram || '';
 };
 
 /**
@@ -148,7 +148,7 @@ window.getInstagram = async function() {
  */
 window.getFacebook = async function() {
     const config = await window.cargarConfiguracionNegocio();
-    return config?.facebook || 'dunia.nails';
+    return config?.facebook || '';
 };
 
 /**
@@ -156,7 +156,7 @@ window.getFacebook = async function() {
  */
 window.getHorarioAtencion = async function() {
     const config = await window.cargarConfiguracionNegocio();
-    return config?.horario_atencion || 'Lun-Vie 10:00-20:00, Sáb 10:00-18:00';
+    return config?.horario_atencion || '';
 };
 
 /**
@@ -164,7 +164,7 @@ window.getHorarioAtencion = async function() {
  */
 window.getMensajeBienvenida = async function() {
     const config = await window.cargarConfiguracionNegocio();
-    return config?.mensaje_bienvenida || '👋 Bienvenida a DuniaNails - Especialistas en uñas';
+    return config?.mensaje_bienvenida || '¡Bienvenida a DuniaNails!';
 };
 
 /**
@@ -172,7 +172,7 @@ window.getMensajeBienvenida = async function() {
  */
 window.getMensajeConfirmacion = async function() {
     const config = await window.cargarConfiguracionNegocio();
-    return config?.mensaje_confirmacion || '✅ Tu turno en DuniaNails ha sido reservado';
+    return config?.mensaje_confirmacion || 'Tu turno ha sido reservado con éxito';
 };
 
 /**
@@ -180,7 +180,7 @@ window.getMensajeConfirmacion = async function() {
  */
 window.getNtfyTopic = async function() {
     const config = await window.cargarConfiguracionNegocio();
-    return config?.ntfy_topic || 'dunia-nails-notifications';
+    return config?.ntfy_topic || 'dunia-nails';
 };
 
 /**
