@@ -16,26 +16,20 @@ function catIcono(categoria) {
     return categoria?.icono || '⭐';
 }
 
-function categoriaCoincideCliente(categoria, valorNormalizado) {
-    if (!categoria || !valorNormalizado) return false;
-    return [catId(categoria), categoria.id, categoria.slug, catNombre(categoria)]
-        .some(valor => normalizarCategoriaServicio(valor) === valorNormalizado);
-}
-
-function resolverCategoriaGuardadaCliente(valor, categorias = []) {
-    const normalizada = normalizarCategoriaServicio(valor);
-    if (!normalizada) return '';
-
-    const categoria = categorias.find(item => categoriaCoincideCliente(item, normalizada));
-    if (categoria) return catId(categoria);
-
-    const conocidas = ['manicura', 'pedicura', 'faciales', 'barberia', 'cejas', 'combos', 'otros'];
-    return conocidas.includes(normalizada) ? normalizada : '';
+function catKey(valor) {
+    return normalizarCategoriaServicio(valor).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
 function inferirCategoriaCliente(servicio, categorias = []) {
-    const categoriaGuardada = resolverCategoriaGuardadaCliente(servicio?.categoria, categorias);
-    if (categoriaGuardada) return categoriaGuardada;
+    if (servicio?.categoria) {
+        const guardada = String(servicio.categoria);
+        const encontrada = categorias.find(categoria =>
+            catId(categoria) === guardada ||
+            catKey(catNombre(categoria)) === catKey(guardada) ||
+            catKey(catId(categoria)) === catKey(guardada)
+        );
+        return encontrada ? catId(encontrada) : guardada;
+    }
 
     const texto = normalizarCategoriaServicio(`${servicio?.nombre || ''} ${servicio?.descripcion || ''}`);
     if (texto.includes('pedic') || texto.includes('pie')) return 'pedicura';
