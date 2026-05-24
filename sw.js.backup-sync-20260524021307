@@ -1,6 +1,6 @@
 // sw.js - Service Worker para DuniaNails
 
-const CACHE_NAME = 'dunia-nails-v29';
+const CACHE_NAME = 'dunia-nails-v25';
 const urlsToCache = [
   '/dunia-nails/',
   '/dunia-nails/index.html',
