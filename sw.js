@@ -1,6 +1,6 @@
 // sw.js - Service Worker para DuniaNails
 
-const CACHE_NAME = 'dunia-nails-v29';
+const CACHE_NAME = 'dunia-nails-v47';
 const urlsToCache = [
   '/dunia-nails/',
   '/dunia-nails/index.html',
@@ -17,7 +17,14 @@ const urlsToCache = [
   '/dunia-nails/icons/icon-152x152.png',
   '/dunia-nails/icons/icon-192x192.png',
   '/dunia-nails/icons/icon-384x384.png',
-  '/dunia-nails/icons/icon-512x512.png'
+  '/dunia-nails/icons/icon-512x512.png',
+  '/dunia-nails/vendor/react.production.min.js',
+  '/dunia-nails/vendor/react-dom.production.min.js',
+  '/dunia-nails/vendor/babel.min.js',
+  '/dunia-nails/vendor/bcrypt.min.js',
+  '/dunia-nails/vendor/tailwind-browser.js',
+  '/dunia-nails/vendor/lucide/lucide.css',
+  '/dunia-nails/vendor/lucide/lucide.woff2'
 ];
 
 // ============================================
